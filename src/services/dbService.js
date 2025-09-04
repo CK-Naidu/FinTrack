@@ -1,4 +1,4 @@
-import { doc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 // This function sets up a new user's initial data in a single batch operation
@@ -10,7 +10,7 @@ export const initializeUser = async (user, initialBalances) => {
   batch.set(userProfileRef, {
     email: user.email,
     name: user.displayName,
-    createdAt: new Date(),
+    createdAt: serverTimestamp(),
   });
 
   // 2. Set initial account balances
@@ -28,7 +28,7 @@ export const initializeUser = async (user, initialBalances) => {
     type: 'bank',
   });
   
-  // 3. Set default categories (optional, can be expanded)
+  // 3. Set default categories
   const categoriesRef = doc(db, 'users', user.uid, 'config', 'categories');
   batch.set(categoriesRef, {
     income: ['Salary', 'Business', 'Investment Return', 'Gift'],

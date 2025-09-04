@@ -1,15 +1,23 @@
 import React from 'react';
 import './App.css';
+import MainLayout from './components/layout/MainLayout';
+import LoginView from './views/LoginView';
+import SetupView from './views/SetupView';
+import { useAuth } from './context/AuthContext';
 
 function App() {
-  return (
-    <div className="flex h-screen items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-blue-600">FinTrack</h1>
-        <p className="mt-2 text-lg text-gray-700">Project is successfully set up.</p>
-      </div>
-    </div>
-  );
+  const { currentUser, isNewUser } = useAuth();
+
+  if (!currentUser) {
+    return <LoginView />;
+  }
+  
+  if (isNewUser) {
+    return <SetupView />;
+  }
+
+  // Show the main app only if a user is logged in and has completed setup
+  return <MainLayout />;
 }
 
 export default App;
