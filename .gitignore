@@ -18,3 +18,5 @@ yarn-error.log*
 
 # System files
 .DS_Store
+# Firebase config
+src/firebase/config.js

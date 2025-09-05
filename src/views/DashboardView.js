@@ -1,6 +1,7 @@
 import React from 'react';
-import { useData } from '../context/DataContext'; // Import the useData hook
-import { Landmark, Wallet } from 'lucide-react'; // Import icons
+import { useData } from '../context/DataContext';
+import { Landmark, Wallet } from 'lucide-react';
+import TransactionList from '../components/transactions/TransactionList'; // Import the TransactionList
 
 // A reusable card component for the dashboard
 const StatCard = ({ title, value, icon, loading }) => (
@@ -20,23 +21,22 @@ const StatCard = ({ title, value, icon, loading }) => (
 );
 
 const DashboardView = () => {
-  // Use the hook to get data and loading state from the context
-  const { accounts, loading } = useData();
+  const { accounts, transactions, loading } = useData(); // Get transactions from context
 
-  // Find the specific accounts from the accounts array
   const cashAccount = accounts.find(acc => acc.type === 'cash');
   const bankAccount = accounts.find(acc => acc.type === 'bank');
 
-  // Format the balances as Indian Rupees, default to 0 if not found
   const cashBalance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(cashAccount?.balance || 0);
   const bankBalance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(bankAccount?.balance || 0);
   const totalBalance = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format((cashAccount?.balance || 0) + (bankAccount?.balance || 0));
+
+  // Get the 5 most recent transactions
+  const recentTransactions = transactions.slice(0, 5);
 
   return (
     <div>
       <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Dashboard</h1>
       
-      {/* Grid for the main stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard 
           title="Cash in Hand" 
@@ -53,16 +53,20 @@ const DashboardView = () => {
         <StatCard 
           title="Total Balance" 
           value={totalBalance} 
-          icon={<Landmark size={24} />} // You can change this icon
+          icon={<Landmark size={24} />}
           loading={loading}
         />
       </div>
 
-      {/* Placeholder for future charts and transaction lists */}
+      {/* Display recent transactions */}
       <div className="mt-8">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md">
-          <h2 className="text-xl font-semibold text-gray-700 dark:text-white">Recent Activity</h2>
-          <p className="mt-4 text-gray-500 dark:text-gray-400">Recent transactions will be displayed here.</p>
+          <h2 className="text-xl font-semibold text-gray-700 dark:text-white mb-4">Recent Activity</h2>
+          {loading ? (
+            <p className="text-center text-gray-500">Loading activity...</p>
+          ) : (
+            <TransactionList transactions={recentTransactions} />
+          )}
         </div>
       </div>
     </div>
@@ -70,4 +74,3 @@ const DashboardView = () => {
 };
 
 export default DashboardView;
-
