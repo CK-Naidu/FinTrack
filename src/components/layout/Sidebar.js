@@ -6,18 +6,20 @@ import {
   BarChart2,
   Settings,
   Wallet,
+  HandHelping, // Icon for Liabilities
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { auth } from '../../firebase/config';
 import { signOut } from 'firebase/auth';
 
-const Sidebar = ({ activeView, setActiveView }) => {
+const Sidebar = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
   const { currentUser } = useAuth();
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'investments', label: 'Investments', icon: CandlestickChart },
+    { id: 'liabilities', label: 'Liabilities', icon: HandHelping }, // New Item
     { id: 'reports', label: 'Reports', icon: BarChart2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -25,9 +27,20 @@ const Sidebar = ({ activeView, setActiveView }) => {
   const handleSignOut = () => {
     signOut(auth).catch(error => console.error("Sign out error", error));
   };
+  
+  const handleNavClick = (viewId) => {
+    setActiveView(viewId);
+    setIsOpen(false); // Close sidebar on mobile after navigation
+  };
 
   return (
-    <aside className="hidden md:flex w-64 flex-col justify-between bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 p-4">
+    <aside className={`
+      fixed inset-y-0 left-0 z-30 w-64 flex-col justify-between 
+      bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 
+      p-4 transform transition-transform duration-300 ease-in-out
+      md:relative md:translate-x-0 md:flex
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+    `}>
       <div>
         <div className="flex items-center space-x-3 mb-8">
           <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
@@ -41,7 +54,7 @@ const Sidebar = ({ activeView, setActiveView }) => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveView(item.id)}
+                onClick={() => handleNavClick(item.id)}
                 className={`flex items-center space-x-3 px-4 py-2 text-left rounded-md transition-colors duration-200 ${
                   activeView === item.id
                     ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400 font-semibold'
@@ -76,4 +89,3 @@ const Sidebar = ({ activeView, setActiveView }) => {
 };
 
 export default Sidebar;
-

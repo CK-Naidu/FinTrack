@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+// Corrected path to go up one directory to the src root
 import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
 
@@ -32,14 +33,12 @@ export const DataProvider = ({ children }) => {
       setAccounts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    // Update the query to sort by creation timestamp for the most accurate "recent" order
     const unsubscribeTransactions = onSnapshot(query(collection(db, basePath, 'transactions'), orderBy('createdAt', 'desc')), (snapshot) => {
       const fetchedTransactions = snapshot.docs.map(doc => {
         const data = doc.data();
         return {
           id: doc.id,
           ...data,
-          // Ensure both date fields are converted to JS Date objects if they exist
           date: data.date?.toDate(),
           createdAt: data.createdAt?.toDate(),
         };
@@ -56,14 +55,12 @@ export const DataProvider = ({ children }) => {
       }
     });
 
-    // This logic can be simplified as the onSnapshot listeners handle loading state implicitly.
-    // However, keeping it ensures we have a clear point when all initial fetches are registered.
     const allUnsubs = [unsubscribeAccounts, unsubscribeTransactions, unsubscribeCategories];
     
-    // A simple mechanism to set loading to false after the first batch of data comes in.
+    // Unsubscribe after the first data load to set loading to false
     const initialLoad = onSnapshot(query(collection(db, basePath, 'transactions'), orderBy('createdAt', 'desc')), () => {
         setLoading(false);
-        initialLoad(); // Unsubscribe after first successful load
+        initialLoad(); 
     });
 
     return () => {
@@ -84,4 +81,3 @@ export const DataProvider = ({ children }) => {
     </DataContext.Provider>
   );
 };
-

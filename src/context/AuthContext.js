@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase/config';
+// Corrected path to go up one directory to the src root
+import { auth, db } from '../firebase/config';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
 
 // Create the context
 const AuthContext = createContext();
