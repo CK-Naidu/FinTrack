@@ -1,41 +1,261 @@
-import React from 'react';
-import { signInWithPopup } from 'firebase/auth';
-// Corrected path to go up one directory to the src root
-import { auth, googleProvider } from '../firebase/config';
-import { Wallet } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  signInWithPopup,
+  RecaptchaVerifier,
+  signInWithPhoneNumber,
+} from "firebase/auth";
+import { auth, googleProvider } from "../firebase/config";
+import { Wallet, Phone } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const LoginView = () => {
-  const handleSignIn = async () => {
+  const [showPhoneLogin, setShowPhoneLogin] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState(null);
+  const [success, setSuccess] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Google login
+  const handleGoogleAuth = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Authentication failed:", error);
+      setSuccess("Signed in successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Google authentication failed.");
+      setTimeout(() => setError(""), 3000);
+    }
+  };
+
+  // Phone number formatting (12345 67890)
+  const handlePhoneChange = (e) => {
+    let input = e.target.value.replace(/\D/g, "");
+    if (input.length > 10) input = input.slice(0, 10);
+    if (input.length > 5) {
+      input = input.slice(0, 5) + " " + input.slice(5);
+    }
+    setPhoneNumber(input);
+  };
+
+  // Initialize reCAPTCHA
+  const initRecaptcha = () => {
+    if (!window.recaptchaVerifier) {
+      window.recaptchaVerifier = new RecaptchaVerifier(
+        auth,
+        "recaptcha-container",
+        { size: "invisible" }
+      );
+    }
+  };
+
+  // Send OTP
+  const handleSendOtp = async () => {
+    const cleanPhone = phoneNumber.replace(/\s/g, "");
+    if (cleanPhone.length !== 10) {
+      setError("Enter a valid 10-digit phone number.");
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
+    try {
+      setLoading(true);
+      initRecaptcha();
+      const appVerifier = window.recaptchaVerifier;
+      const fullPhone = "+91" + cleanPhone;
+      const result = await signInWithPhoneNumber(auth, fullPhone, appVerifier);
+      setConfirmationResult(result);
+      setSuccess("OTP sent successfully.");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to send OTP. Try again.");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Verify OTP
+  const handleVerifyOtp = async () => {
+    if (!otp || !confirmationResult) return;
+    try {
+      setLoading(true);
+      await confirmationResult.confirm(otp);
+      setSuccess("Signed in successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setError("OTP verification failed.");
+      setTimeout(() => setError(""), 3000);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-2xl">
-        <div className="text-center">
-          <div className="inline-block p-3 bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 font-sans">
+      <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-2xl">
+        {/* Logo + App Name side by side */}
+        <div className="flex items-center justify-center space-x-3 mb-2">
+          <div className="inline-block p-3 bg-blue-100 dark:bg-blue-900 rounded-full">
             <Wallet className="w-8 h-8 text-blue-600 dark:text-blue-400" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome to FinTrack</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">Sign in to begin your financial journey.</p>
+          <h1 className="text-3xl font-extrabold text-blue-600 dark:text-blue-400 tracking-wide">
+            FinTrack
+          </h1>
         </div>
-        <button
-          onClick={handleSignIn}
-          className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-800 focus:ring-blue-500 transition-all duration-200 transform hover:scale-105"
-        >
-          <svg className="w-5 h-5 mr-3" viewBox="0 0 48 48">
-            <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C44.637,32.406,48,27.14,48,20C48,20,43.611,20.083,43.611,20.083z"></path>
-            <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path>
-            <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.519-3.317-11.28-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path>
-            <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571l6.19,5.238C44.637,32.406,48,27.14,48,20C48,20,43.611,20.083,43.611,20.083z"></path>
-          </svg>
-          Sign in with Google
-        </button>
+        <p className="text-center text-gray-600 dark:text-gray-400">
+          Sign in to continue your journey.
+        </p>
+
+        {/* Success & Error */}
+        <AnimatePresence>
+          {success && (
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+              className="text-green-600 font-medium text-center"
+            >
+              {success}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+              className="text-red-600 font-medium text-center"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        {/* Auth Options */}
+        {!showPhoneLogin ? (
+          <>
+            {/* Google Login */}
+            <button
+              onClick={handleGoogleAuth}
+              className="w-full inline-flex items-center justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition transform hover:scale-105"
+            >
+              <svg className="w-5 h-5 mr-3" viewBox="0 0 533.5 544.3">
+                <path
+                  fill="#4285F4"
+                  d="M533.5 278.4c0-17.4-1.6-34.1-4.7-50.4H272v95.4h147.5c-6.4 34.9-25.8 64.5-55.1 84.3l89 69.1c52-47.9 80.1-118.4 80.1-198.4z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M272 544.3c73.7 0 135.6-24.4 180.8-66.5l-89-69.1c-24.7 16.6-56.5 26.5-91.8 26.5-70.6 0-130.4-47.6-151.8-111.5l-92.7 71.4c41.1 81.4 125.5 149.2 244.5 149.2z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M120.2 323.7c-10.7-31.9-10.7-66.4 0-98.3l-92.7-71.4c-39.5 78.9-39.5 162.6 0 241.5l92.7-71.8z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M272 107.7c39.9 0 75.8 13.8 104.1 40.7l77.6-77.6C407.2 24.4 345.3 0 272 0 153 0 68.6 67.8 27.5 149.2l92.7 71.4C141.6 155.3 201.4 107.7 272 107.7z"
+                />
+              </svg>
+              Sign in with Google
+            </button>
+
+            {/* Switch to Phone Login */}
+            <button
+              onClick={() => setShowPhoneLogin(true)}
+              className="w-full inline-flex items-center justify-center py-3 px-4 mt-3 border border-gray-300 rounded-lg shadow-sm bg-white dark:bg-gray-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 transition transform hover:scale-105"
+            >
+              <Phone className="w-5 h-5 mr-3 text-blue-600 dark:text-blue-400" />
+              Sign in with Phone
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Phone Input */}
+            <div className="flex justify-center items-center space-x-2">
+              <span className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 font-medium">
+                +91
+              </span>
+              <input
+                type="text"
+                placeholder="12345 67890"
+                value={phoneNumber}
+                onChange={handlePhoneChange}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-center font-mono text-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              />
+            </div>
+
+            {/* OTP Input */}
+            {confirmationResult && (
+              <div className="flex justify-center space-x-2 mt-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <input
+                    key={i}
+                    type="text"
+                    maxLength={1}
+                    className="w-10 h-12 border border-gray-300 rounded-md text-center text-lg font-mono focus:ring-2 focus:ring-green-400 focus:outline-none"
+                    value={otp[i] || ""}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/, "");
+                      if (!val) return;
+                      let newOtp = otp.split("");
+                      newOtp[i] = val;
+                      setOtp(newOtp.join(""));
+                      if (e.target.nextSibling) e.target.nextSibling.focus();
+                    }}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Backspace" &&
+                        !otp[i] &&
+                        e.target.previousSibling
+                      ) {
+                        e.target.previousSibling.focus();
+                      }
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex space-x-2 mt-3">
+              {!confirmationResult ? (
+                <button
+                  onClick={handleSendOtp}
+                  disabled={loading}
+                  className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {loading ? "Sending..." : "Send OTP"}
+                </button>
+              ) : (
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={loading}
+                  className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {loading ? "Verifying..." : "Verify OTP"}
+                </button>
+              )}
+
+              <button
+                onClick={() => setShowPhoneLogin(false)}
+                className="py-2 px-4 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
+              >
+                Use Google Instead
+              </button>
+            </div>
+          </>
+        )}
       </div>
+      <div id="recaptcha-container"></div>
     </div>
   );
 };
