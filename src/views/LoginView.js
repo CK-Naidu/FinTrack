@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   signInWithPopup,
   RecaptchaVerifier,
@@ -8,14 +8,18 @@ import { auth, googleProvider } from "../firebase/config";
 import { Wallet, Phone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const OTP_LENGTH = 6;
+
 const LoginView = () => {
   const [showPhoneLogin, setShowPhoneLogin] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const otpRef = useRef([]);
 
   // Google login
   const handleGoogleAuth = async () => {
@@ -79,10 +83,11 @@ const LoginView = () => {
 
   // Verify OTP
   const handleVerifyOtp = async () => {
-    if (!otp || !confirmationResult) return;
+    const otpString = otp.join("");
+    if (!otpString || otpString.length < OTP_LENGTH || !confirmationResult) return;
     try {
       setLoading(true);
-      await confirmationResult.confirm(otp);
+      await confirmationResult.confirm(otpString);
       setSuccess("Signed in successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
@@ -91,6 +96,52 @@ const LoginView = () => {
       setTimeout(() => setError(""), 3000);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // OTP input logic
+  const handleOtpChange = (e, idx) => {
+    let val = e.target.value.replace(/\D/g, "");
+
+    let newOtp = [...otp];
+
+    // Paste support: distribute pasted OTP digits
+    if (val.length > 1) {
+      val.split("").forEach((digit, i) => {
+        if (i + idx < OTP_LENGTH) newOtp[i + idx] = digit;
+      });
+      setOtp(newOtp);
+      const nextIdx = Math.min(idx + val.length, OTP_LENGTH - 1);
+      otpRef.current[nextIdx]?.focus();
+      return;
+    }
+
+    // Single digit input
+    newOtp[idx] = val;
+    setOtp(newOtp);
+    if (val && idx < OTP_LENGTH - 1) {
+      otpRef.current[idx + 1].focus();
+    }
+  };
+
+  const handleOtpKeyDown = (e, idx) => {
+    if (e.key === "Backspace") {
+      let newOtp = [...otp];
+      if (otp[idx]) {
+        newOtp[idx] = "";
+        setOtp(newOtp);
+      } else if (idx > 0) {
+        otpRef.current[idx - 1].focus();
+        newOtp[idx - 1] = "";
+        setOtp(newOtp);
+      }
+      e.preventDefault();
+    } else if (e.key === "ArrowLeft" && idx > 0) {
+      otpRef.current[idx - 1].focus();
+      e.preventDefault();
+    } else if (e.key === "ArrowRight" && idx < OTP_LENGTH - 1) {
+      otpRef.current[idx + 1].focus();
+      e.preventDefault();
     }
   };
 
@@ -196,30 +247,19 @@ const LoginView = () => {
             {/* OTP Input */}
             {confirmationResult && (
               <div className="flex justify-center space-x-2 mt-3">
-                {Array.from({ length: 6 }).map((_, i) => (
+                {otp.map((digit, i) => (
                   <input
                     key={i}
+                    ref={el => (otpRef.current[i] = el)}
                     type="text"
                     maxLength={1}
                     className="w-10 h-12 border border-gray-300 rounded-md text-center text-lg font-mono focus:ring-2 focus:ring-green-400 focus:outline-none"
-                    value={otp[i] || ""}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/, "");
-                      if (!val) return;
-                      let newOtp = otp.split("");
-                      newOtp[i] = val;
-                      setOtp(newOtp.join(""));
-                      if (e.target.nextSibling) e.target.nextSibling.focus();
-                    }}
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === "Backspace" &&
-                        !otp[i] &&
-                        e.target.previousSibling
-                      ) {
-                        e.target.previousSibling.focus();
-                      }
-                    }}
+                    value={digit}
+                    onChange={e => handleOtpChange(e, i)}
+                    onKeyDown={e => handleOtpKeyDown(e, i)}
+                    onFocus={e => e.target.select()}
+                    autoComplete="off"
+                    inputMode="numeric"
                   />
                 ))}
               </div>
@@ -238,7 +278,7 @@ const LoginView = () => {
               ) : (
                 <button
                   onClick={handleVerifyOtp}
-                  disabled={loading}
+                  disabled={loading || otp.join("").length < OTP_LENGTH}
                   className="flex-1 py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {loading ? "Verifying..." : "Verify OTP"}
