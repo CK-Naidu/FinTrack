@@ -6,7 +6,7 @@ import {
   BarChart2,
   Settings,
   Wallet,
-  HandHelping, // Icon for Liabilities
+  HandHelping,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { auth } from '../../firebase/config';
@@ -19,7 +19,7 @@ const Sidebar = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'transactions', label: 'Transactions', icon: Receipt },
     { id: 'investments', label: 'Investments', icon: CandlestickChart },
-    { id: 'liabilities', label: 'Liabilities', icon: HandHelping }, // New Item
+    { id: 'liabilities', label: 'Liabilities', icon: HandHelping },
     { id: 'reports', label: 'Reports', icon: BarChart2 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
@@ -30,7 +30,7 @@ const Sidebar = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
   
   const handleNavClick = (viewId) => {
     setActiveView(viewId);
-    setIsOpen(false); // Close sidebar on mobile after navigation
+    setIsOpen(false);
   };
 
   return (
@@ -69,20 +69,25 @@ const Sidebar = ({ activeView, setActiveView, isOpen, setIsOpen }) => {
         </nav>
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-        <div className="flex items-center space-x-3 p-2">
-          <img
-            src={currentUser?.photoURL || 'https://placehold.co/40x40'}
-            alt="User"
-            className="w-10 h-10 rounded-full"
-          />
-          <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.displayName}</p>
-            <button onClick={handleSignOut} className="text-xs text-red-500 hover:underline">
-              Sign Out
-            </button>
+      <div>
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="flex items-center space-x-3 p-2">
+            <img
+              src={currentUser?.photoURL || 'https://placehold.co/40x40'}
+              alt="User"
+              className="w-10 h-10 rounded-full"
+            />
+            <div>
+              <p className="text-sm font-semibold text-gray-800 dark:text-white">{currentUser?.displayName}</p>
+              <button onClick={handleSignOut} className="text-xs text-red-500 hover:underline">
+                Sign Out
+              </button>
+            </div>
           </div>
         </div>
+        <p className="text-center text-xs text-gray-400 dark:text-gray-500 mt-4">
+          Developed by Kandi Chenna Kesava Naidu
+        </p>
       </div>
     </aside>
   );

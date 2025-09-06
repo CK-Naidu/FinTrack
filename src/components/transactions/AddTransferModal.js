@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
-import { addTransfer } from '../../services/dbService'; // Import the new transfer function
+import { addTransfer } from '../../services/dbService';
 
 const AddTransferModal = ({ onClose }) => {
   const { currentUser } = useAuth();
@@ -15,15 +15,27 @@ const AddTransferModal = ({ onClose }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Set default accounts when component loads
+  const today = new Date().toISOString().slice(0, 10);
+
   useEffect(() => {
     if (accounts.length >= 2) {
-      setFromAccountId(accounts.find(a => a.type === 'bank')?.id || accounts[0].id);
-      setToAccountId(accounts.find(a => a.type === 'cash')?.id || accounts[1].id);
+      const bank = accounts.find(a => a.type === 'bank');
+      const cash = accounts.find(a => a.type === 'cash');
+      setFromAccountId(bank?.id || accounts[0].id);
+      setToAccountId(cash?.id || accounts[1].id);
     }
   }, [accounts]);
 
-  // Handle form submission
+  const handleFromChange = (newFromId) => {
+    setFromAccountId(newFromId);
+    if (newFromId === toAccountId) {
+      const otherAccount = accounts.find(acc => acc.id !== newFromId);
+      if (otherAccount) {
+        setToAccountId(otherAccount.id);
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const parsedAmount = parseFloat(amount);
@@ -42,9 +54,8 @@ const AddTransferModal = ({ onClose }) => {
         date,
         description
       };
-      // Call the database function to save the transfer
       await addTransfer(currentUser.uid, transferData);
-      onClose(); // Close the modal on success
+      onClose();
     } catch (err) {
       console.error("Transfer failed:", err);
       setError(err.message || 'Failed to process transfer. Please try again.');
@@ -54,7 +65,6 @@ const AddTransferModal = ({ onClose }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Amount Input */}
       <div>
         <label htmlFor="transfer-amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount (₹)</label>
         <input
@@ -63,12 +73,10 @@ const AddTransferModal = ({ onClose }) => {
           className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
-
-      {/* From Account Select */}
       <div>
         <label htmlFor="from-account" className="block text-sm font-medium text-gray-700 dark:text-gray-300">From</label>
         <select
-          id="from-account" value={fromAccountId} onChange={(e) => setFromAccountId(e.target.value)} required
+          id="from-account" value={fromAccountId} onChange={(e) => handleFromChange(e.target.value)} required
           className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         >
           {accounts.map(acc => (
@@ -76,8 +84,6 @@ const AddTransferModal = ({ onClose }) => {
           ))}
         </select>
       </div>
-
-      {/* To Account Select */}
       <div>
         <label htmlFor="to-account" className="block text-sm font-medium text-gray-700 dark:text-gray-300">To</label>
         <select
@@ -89,13 +95,13 @@ const AddTransferModal = ({ onClose }) => {
           ))}
         </select>
       </div>
-      
-      {/* Date and Description */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="transfer-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
           <input
-            id="transfer-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required
+            id="transfer-date" type="date" value={date} 
+            max={today}
+            onChange={(e) => setDate(e.target.value)} required
             className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -108,10 +114,7 @@ const AddTransferModal = ({ onClose }) => {
           />
         </div>
       </div>
-
       {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-
-      {/* Submit Button */}
       <div className="pt-2">
         <button
           type="submit" disabled={loading}
@@ -125,4 +128,3 @@ const AddTransferModal = ({ onClose }) => {
 };
 
 export default AddTransferModal;
-

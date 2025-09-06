@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useData } from '../../context/DataContext';
 import { addTransaction } from '../../services/dbService';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, serverTimestamp } from 'firebase/firestore';
 
-const AddTransactionModal = ({ onClose }) => {
+const AddTransactionModal = ({ onClose, initialType = 'expense' }) => {
   const { currentUser } = useAuth();
   const { accounts, categories } = useData();
-
-  const [type, setType] = useState('expense');
+  const type = initialType;
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [accountId, setAccountId] = useState('');
@@ -17,21 +16,15 @@ const AddTransactionModal = ({ onClose }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Set default account when the component loads
+  const today = new Date().toISOString().slice(0, 10);
+
   useEffect(() => {
-    if (accounts.length > 0) {
-      setAccountId(accounts[0].id);
-    }
+    if (accounts.length > 0) setAccountId(accounts[0].id);
   }, [accounts]);
 
-  // Set default category when the transaction type changes
   useEffect(() => {
     const categoryList = categories[type] || [];
-    if (categoryList.length > 0) {
-      setCategory(categoryList[0]);
-    } else {
-      setCategory('');
-    }
+    setCategory(categoryList.length > 0 ? categoryList[0] : '');
   }, [type, categories]);
 
   const handleSubmit = async (e) => {
@@ -44,18 +37,20 @@ const AddTransactionModal = ({ onClose }) => {
     setError('');
 
     try {
+      const selectedAccount = accounts.find(acc => acc.id === accountId);
       const transactionData = {
         userId: currentUser.uid,
         type,
         amount: parseFloat(amount),
         category,
         accountId,
+        accountName: selectedAccount?.name || 'Unknown',
         date: Timestamp.fromDate(new Date(date)),
         description,
+        createdAt: serverTimestamp()  // Only set on creation
       };
-      // Call the database function to save the data
       await addTransaction(currentUser.uid, transactionData);
-      onClose(); // Close the modal on success
+      onClose();
     } catch (err) {
       console.error("Failed to add transaction:", err);
       setError('Failed to add transaction. Please try again.');
@@ -67,25 +62,6 @@ const AddTransactionModal = ({ onClose }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* Transaction Type Switch */}
-      <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-        <button
-          type="button"
-          onClick={() => setType('expense')}
-          className={`w-full py-2 rounded-md text-sm font-semibold transition-colors ${type === 'expense' ? 'bg-red-500 text-white shadow' : 'text-gray-600 dark:text-gray-300'}`}
-        >
-          Expense
-        </button>
-        <button
-          type="button"
-          onClick={() => setType('income')}
-          className={`w-full py-2 rounded-md text-sm font-semibold transition-colors ${type === 'income' ? 'bg-green-500 text-white shadow' : 'text-gray-600 dark:text-gray-300'}`}
-        >
-          Income
-        </button>
-      </div>
-
-      {/* Amount Input */}
       <div>
         <label htmlFor="amount" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Amount (₹)</label>
         <input
@@ -94,8 +70,7 @@ const AddTransactionModal = ({ onClose }) => {
           className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
         />
       </div>
-      
-      {/* Account Select */}
+
       <div>
         <label htmlFor="account" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Account</label>
         <select
@@ -108,7 +83,6 @@ const AddTransactionModal = ({ onClose }) => {
         </select>
       </div>
 
-      {/* Category Select */}
       <div>
         <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
         <select
@@ -120,12 +94,12 @@ const AddTransactionModal = ({ onClose }) => {
         </select>
       </div>
 
-      {/* Date and Description */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label htmlFor="date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
           <input
-            id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required
+            id="date" type="date" value={date} max={today}
+            onChange={(e) => setDate(e.target.value)} required
             className="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
@@ -138,10 +112,9 @@ const AddTransactionModal = ({ onClose }) => {
           />
         </div>
       </div>
-      
+
       {error && <p className="text-red-500 text-sm text-center">{error}</p>}
 
-      {/* Submit Button */}
       <div className="pt-2">
         <button
           type="submit" disabled={loading}
